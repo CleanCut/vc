@@ -3,6 +3,8 @@ name = "vc"
 version = "0.0.1"
 authors = ["Nathan Stocks <cleancut@github.com>"]
 edition = "2018"
+description = "vc is an implementation of Git in Rust"
+license = "GPL-2.0-only"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
