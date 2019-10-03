@@ -1,6 +1,7 @@
 use clap::{App, Arg, SubCommand};
+use std::io::Error;
 
-fn main() {
+fn main() -> Result<(), Error>{
     let args = App::new("vc")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -30,7 +31,7 @@ fn main() {
                 .value_name("git dir")
                 .help("Instead of initializing the repository as a directory to either $GIT_DIR or ./.git/, create a text file there containing the path to the actual repository. This file acts as filesystem-agnostic Git symbolic link to the repository.\n\nIf this is reinitialization, the repository will be moved to the specified path."))
 // todo: convert from string values to int
-            .arg(Arg::with_name("shared")
+            .arg(Arg::with_name("shared_repo")
                 .long("shared")
                 .takes_value(true)
                 .value_name("(false|true|umask|group|all|world|everybody|0xxx)")
@@ -79,6 +80,9 @@ all (or world or everybody)
 
     match args.subcommand() {
         ("init", Some(subcommand_args)) => vc::init_db::cmd_init_db(subcommand_args),
-        _ => println!("unhandled"),
+        _ => {
+            println!("unhandled");
+            Ok(())
+        },
     }
 }

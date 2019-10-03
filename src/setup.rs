@@ -1,3 +1,3 @@
-fn git_config_perm(var: AsRef<str>, value: AsRef<str>) {
-    
+fn git_config_perm<T: AsRef<str>, U: AsRef<str>>(var: T, value: U) {
+
 }
