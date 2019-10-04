@@ -1,7 +1,7 @@
 use clap::{App, Arg, SubCommand};
 use std::io::Error;
 
-fn main() -> Result<(), Error>{
+fn main() -> Result<(), Error> {
     let args = App::new("vc")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -83,6 +83,6 @@ all (or world or everybody)
         _ => {
             println!("unhandled");
             Ok(())
-        },
+        }
     }
 }

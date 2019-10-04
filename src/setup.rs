@@ -1,3 +1,3 @@
-fn git_config_perm<T: AsRef<str>, U: AsRef<str>>(var: T, value: U) {
+//! Compare to setup.c
 
-}
+pub fn git_config_perm<T: Into<String>, U: Into<String>>(var: T, value: U) {}
