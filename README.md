@@ -7,7 +7,7 @@ internals by implementing them myself.
 ## Goals
 
 - Write the Git parts themselves in plain Rust using the standard library
-- If I ever get to non-Git parts (TLS, for example) lean on external crates as much as possible.
+- Lean on external crates as much as possible for non-core-Git functionality
 
 ## Non-goals
 
