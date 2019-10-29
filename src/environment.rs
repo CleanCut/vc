@@ -1,7 +1,7 @@
-// todo: implement this function
-pub fn get_shared_repository() -> i32 {
-    0
-}
+// Logic rolled into the SharedRepo struct in cache.rs:
+//
+//   int get_shared_repository(void) { }
+//   void set_shared_repository(int value) { }
+//   static int the_shared_repository
+//   static int need_shared_repository_from_config
 
-// todo: implement this function
-pub fn set_shared_repository(val: i32) {}

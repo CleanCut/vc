@@ -1,7 +1,6 @@
 //! Compare to `builtin/init-db.c`
 
 use crate::cache::SharedRepo;
-use crate::environment::{get_shared_repository, set_shared_repository};
 use crate::sha1_file::safe_create_leading_directories;
 use crate::usage::{die, usage};
 use clap::ArgMatches;
@@ -11,6 +10,7 @@ use std::fs::Permissions;
 // this adds the ability to create/modify Permissions, but restricts compatibility to unix-like os's
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::convert::TryFrom;
 
 /// Compare to `builtin/init-db.c :: cmd_init_db`
 ///
@@ -30,8 +30,6 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
     }
     let directory: PathBuf = directory.unwrap(); // guaranteed not to panic
 
-    let shared_repo = SharedRepo::from(args.value_of("shared_repo"));
-    let perms = Permissions::from_mode(shared_repo.as_permissions());
 
     let mut mkdir_tried = false;
     loop {
@@ -41,17 +39,13 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         if mkdir_tried {
             die(format!("cannot chdir to {}", directory.to_str().unwrap()));
         }
-        // todo: this noop saving/restoring is likely completely unnecessary since we're not using
-        // mutable global state like git is in C.  Probably remove this when implementing retrieving
-        // config values.
-        let saved = get_shared_repository();
-        set_shared_repository(0);
         if safe_create_leading_directories(&directory).is_err() {
             die(format!("cannot mkdir {}", directory.to_str().unwrap()));
         }
-        set_shared_repository(saved);
-
-        if fs::create_dir(&directory).is_err() || fs::set_permissions(&directory, perms.clone()).is_err() {
+        // todo: fix this permissions thing. something is off, it doesn't end up 0777 in the real
+        // implementation, though it appears to use it at this point.  Perhaps it is in the
+        // implementation of the C mkdir()
+        if fs::create_dir(&directory).is_err() || fs::set_permissions(&directory, Permissions::from_mode(0o0777)).is_err() {
             die(format!("cannot mkdir {}", directory.to_str().unwrap()));
         }
         mkdir_tried = true;
@@ -61,9 +55,14 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         env::set_var("GIT_DIR_ENVIRONMENT", env::current_dir()?);
     }
 
-    if args.is_present("shared") {
-        // See init-db.c:549
-    }
+    // I traced quite a bit of logic related to this value in the C code, and I think I have
+    // managed to contain that logic entirely with SharedRep::from()
+    let shared_repo = SharedRepo::from(args.value_of("shared_repo"));
+    let perms = Permissions::from_mode(shared_repo.as_permissions());
+
+
+    // todo: continue translation from
+    // https://github.com/github/git/blob/81ed82f5e00b805039bd79e36c74a56533211cd0/builtin/init-db.c#L552
 
     Ok(())
 }

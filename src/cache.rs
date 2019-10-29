@@ -3,6 +3,7 @@
 use crate::usage::die;
 
 /// Sort of like `cache.h :: enum sharedrepo`
+#[derive(Copy, Clone)]
 pub enum SharedRepo {
     PermUmask,
     PermGroup,
@@ -11,14 +12,26 @@ pub enum SharedRepo {
 }
 
 impl SharedRepo {
-    /// Constructor based on strings from cli/config
+    /// Constructor based on string from the cli. Option::None means no cli override, so get it from
+    /// the config.
     pub fn from(val: Option<&str>) -> Self {
         /*
          * Treat values 0, 1 and 2 as compatibility cases.
          */
         match val {
-            Some("umask") | Some("false") | Some("0") => SharedRepo::PermUmask,
-            None | Some("group") | Some("1") => SharedRepo::PermGroup,
+            None => {
+                // todo: get the value from the config file(s)
+                if false {
+                    // `value` in C is the pointer to store the retrieved value into.
+                    // if (!git_config_get_value("core.sharedrepository", value)
+                    //     the_shared_repository = git_config_perm("core.sharedrepository", value)
+                    SharedRepo::PermGroup // delete this line when the above is implemented ^
+                } else {
+                    SharedRepo::PermGroup
+                }
+            }
+            Some("umask") | Some("false") | Some("no") | Some("off") | Some("0") => SharedRepo::PermUmask,
+            Some("group") | Some("true") | Some("yes") | Some("on") | Some("1") => SharedRepo::PermGroup,
             Some("all") | Some("world") | Some("everybody") | Some("2") => {
                 SharedRepo::PermEverybody
             }
@@ -26,8 +39,6 @@ impl SharedRepo {
                 // Parse octal numbers
                 let maybe_octal = s.parse::<u32>();
                 if maybe_octal.is_err() {
-                    // todo: Check a config value. See setup.c:1207-1208. The call seems to be git_config_perm("arg", "shared")
-                    // For now I'll punt and return the default, but that's not the correct behavior.
                     SharedRepo::PermGroup
                 } else {
                     // A filemode value was given: 0xxx
