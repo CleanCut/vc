@@ -6,9 +6,6 @@ use crate::usage::{die, usage};
 use clap::ArgMatches;
 use std::env;
 use std::fs;
-use std::fs::Permissions;
-// this adds the ability to create/modify Permissions, but restricts compatibility to unix-like os's
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 /// Compare to `builtin/init-db.c :: cmd_init_db`
@@ -23,12 +20,11 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         .value_of("template_dir")
         .map(|x| PathBuf::from(x).canonicalize().unwrap());
 
-    let directory: Option<PathBuf> = args.value_of("directory").map(|x| PathBuf::from(x));
+    let directory: Option<PathBuf> = args.value_of("directory").map(PathBuf::from);
     if directory.is_none() {
         usage("vc init [-q | --quiet] [--bare] [--template=<template-directory>] [--shared[=<permissions>]] [<directory>]")
     }
     let directory: PathBuf = directory.unwrap(); // guaranteed not to panic
-
 
     let mut mkdir_tried = false;
     loop {
@@ -58,7 +54,6 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
     // I traced quite a bit of logic related to this value in the C code, and I think I have
     // managed to contain that logic entirely with SharedRepo::from()
     let shared_repo = SharedRepo::from(args.value_of("shared_repo"));
-
 
     // todo: continue translation from
     // https://github.com/github/git/blob/81ed82f5e00b805039bd79e36c74a56533211cd0/builtin/init-db.c#L552

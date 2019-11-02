@@ -4,4 +4,3 @@
 //   void set_shared_repository(int value) { }
 //   static int the_shared_repository
 //   static int need_shared_repository_from_config
-

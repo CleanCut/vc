@@ -11,6 +11,7 @@ pub enum SharedRepo {
     PermMask(u32),
 }
 
+#[allow(clippy::if_same_then_else)] // remove this attribute once the "todo (config values)" is done.
 impl SharedRepo {
     /// Constructor based on string from the cli. Option::None means no cli override, so get it from
     /// the config.
@@ -20,29 +21,30 @@ impl SharedRepo {
          */
         match val {
             None => {
-                // todo: get the value from the config file(s)
+                // todo (config values): get the value from the config file(s)
                 if false {
                     // `value` in C is the pointer to store the retrieved value into.
                     // if (!git_config_get_value("core.sharedrepository", value)
                     //     the_shared_repository = git_config_perm("core.sharedrepository", value)
                     SharedRepo::PermGroup // delete this line when the above is implemented ^
+                    // oh, and delete the #[allow(clippy::if_same_then_else)] line too.
                 } else {
                     SharedRepo::PermGroup
                 }
             }
-            Some("umask") | Some("false") | Some("no") | Some("off") | Some("0") => SharedRepo::PermUmask,
-            Some("group") | Some("true") | Some("yes") | Some("on") | Some("1") => SharedRepo::PermGroup,
+            Some("umask") | Some("false") | Some("no") | Some("off") | Some("0") => {
+                SharedRepo::PermUmask
+            }
+            Some("group") | Some("true") | Some("yes") | Some("on") | Some("1") => {
+                SharedRepo::PermGroup
+            }
             Some("all") | Some("world") | Some("everybody") | Some("2") => {
                 SharedRepo::PermEverybody
             }
             Some(s) => {
                 // Parse octal numbers
-                let maybe_octal = s.parse::<u32>();
-                if maybe_octal.is_err() {
-                    SharedRepo::PermGroup
-                } else {
+                if let Ok(octal) = s.parse::<u32>() {
                     // A filemode value was given: 0xxx
-                    let octal = maybe_octal.unwrap();
                     if (octal & 0o600) != 0o600 {
                         die(format!(
                             "problem with core.sharedRepository filemode value {:3o}.\n\
@@ -60,6 +62,8 @@ impl SharedRepo {
                     // values stored in the same int. We've got the full power of a Rust enum, so
                     // we'll stick to sane values, thank you very much.
                     SharedRepo::PermMask(octal & 0o666)
+                } else {
+                    SharedRepo::PermGroup
                 }
             }
         }
