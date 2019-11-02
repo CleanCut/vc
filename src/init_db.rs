@@ -10,7 +10,6 @@ use std::fs::Permissions;
 // this adds the ability to create/modify Permissions, but restricts compatibility to unix-like os's
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::convert::TryFrom;
 
 /// Compare to `builtin/init-db.c :: cmd_init_db`
 ///
@@ -42,10 +41,11 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         if safe_create_leading_directories(&directory).is_err() {
             die(format!("cannot mkdir {}", directory.to_str().unwrap()));
         }
-        // todo: fix this permissions thing. something is off, it doesn't end up 0777 in the real
-        // implementation, though it appears to use it at this point.  Perhaps it is in the
-        // implementation of the C mkdir()
-        if fs::create_dir(&directory).is_err() || fs::set_permissions(&directory, Permissions::from_mode(0o0777)).is_err() {
+
+        // C's mkdir from libc takes the passed-in mode and masks it with the current process's
+        // umask. C Git passes in 0777 to mkdir to enable all of the bits that don't get masked out,
+        // which is what fs::create_dir() appears to do by default.
+        if fs::create_dir(&directory).is_err() {
             die(format!("cannot mkdir {}", directory.to_str().unwrap()));
         }
         mkdir_tried = true;
@@ -56,9 +56,8 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
     }
 
     // I traced quite a bit of logic related to this value in the C code, and I think I have
-    // managed to contain that logic entirely with SharedRep::from()
+    // managed to contain that logic entirely with SharedRepo::from()
     let shared_repo = SharedRepo::from(args.value_of("shared_repo"));
-    let perms = Permissions::from_mode(shared_repo.as_permissions());
 
 
     // todo: continue translation from
