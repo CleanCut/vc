@@ -1,6 +1,6 @@
-//! Compare to `builtin/init-db.c`
+//! Compare to C Git `builtin/init-db.c`
 
-use crate::cache::SharedRepo;
+use crate::cache::{SharedRepo, GIT_DIR_ENVIRONMENT, GIT_WORK_TREE_ENVIRONMENT};
 use crate::sha1_file::safe_create_leading_directories;
 use crate::usage::{die, usage};
 use clap::ArgMatches;
@@ -8,15 +8,21 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-/// Compare to `builtin/init-db.c :: cmd_init_db`
+/*
+ * If you want to, you can share the DB area with any number of branches.
+ * That has advantages: you can save space by sharing all the SHA1 objects.
+ * On the other hand, it might just make lookup slower and messier. You
+ * be the judge.  The default case is to have one DB per managed directory.
+ */
+/// Compare to `builtin/init-db.c` `cmd_init_db`
 ///
 /// Handles cli `git init` command.
 pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
-    let real_git_dir: Option<PathBuf> = args
+    let _real_git_dir: Option<PathBuf> = args
         .value_of("real_git_dir")
         .map(|x| PathBuf::from(x).canonicalize().unwrap());
 
-    let template_dir: Option<PathBuf> = args
+    let _template_dir: Option<PathBuf> = args
         .value_of("template_dir")
         .map(|x| PathBuf::from(x).canonicalize().unwrap());
 
@@ -47,16 +53,36 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         mkdir_tried = true;
     }
 
+    // todo: See if we can simplify from here to line 82. C Git makes a round trip through the
+    // environment, which seems like a big smell. First need to verify C Git doesn't unset it while
+    // setting shared_repo in https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L550
     if args.is_present("bare") {
-        env::set_var("GIT_DIR_ENVIRONMENT", env::current_dir()?);
+        env::set_var(GIT_DIR_ENVIRONMENT, env::current_dir()?);
     }
 
     // I traced quite a bit of logic related to this value in the C code, and I think I have
     // managed to contain that logic entirely with SharedRepo::from()
-    let shared_repo = SharedRepo::from(args.value_of("shared_repo"));
+    let _shared_repo = SharedRepo::from(args.value_of("shared_repo"));
 
-    // todo: continue translation from
-    // https://github.com/github/git/blob/81ed82f5e00b805039bd79e36c74a56533211cd0/builtin/init-db.c#L552
+    /*
+     * GIT_WORK_TREE makes sense only in conjunction with GIT_DIR
+     * without --bare.  Catch the error early.
+     */
+    let git_dir = env::var(GIT_DIR_ENVIRONMENT).unwrap_or_default();
+    let work_tree = env::var(GIT_WORK_TREE_ENVIRONMENT).unwrap_or_default();
+    // todo: `|| args.is_present("bare")` will *never* be true if we reach it, because if it were
+    //       true then we would have set `git_dir` to non-empty via line 53.  Remove it once the
+    //       line 50 todo has been completed.
+    if (git_dir.is_empty() || args.is_present("bare")) && !work_tree.is_empty() {
+        die(format!(
+            "{} (or --work-tree=<directory>) not allowed without
+             specifying {} (or --git-dir=<directory>)",
+            GIT_WORK_TREE_ENVIRONMENT, GIT_DIR_ENVIRONMENT
+        ));
+    }
+
+    // todo: continue from
+    // https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L564
 
     Ok(())
 }

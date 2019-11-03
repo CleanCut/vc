@@ -2,7 +2,10 @@
 
 use crate::usage::die;
 
-/// Sort of like `cache.h :: enum sharedrepo`
+pub const GIT_DIR_ENVIRONMENT: &str = "GIT_DIR";
+pub const GIT_WORK_TREE_ENVIRONMENT: &str = "GIT_WORK_TREE";
+
+/// Sort of like cache.h's "enum sharedrepo"
 #[derive(Copy, Clone)]
 pub enum SharedRepo {
     PermUmask,
@@ -27,7 +30,7 @@ impl SharedRepo {
                     // if (!git_config_get_value("core.sharedrepository", value)
                     //     the_shared_repository = git_config_perm("core.sharedrepository", value)
                     SharedRepo::PermGroup // delete this line when the above is implemented ^
-                    // oh, and delete the #[allow(clippy::if_same_then_else)] line too.
+                                          // oh, and delete the #[allow(clippy::if_same_then_else)] line too.
                 } else {
                     SharedRepo::PermGroup
                 }
