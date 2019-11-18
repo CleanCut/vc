@@ -21,8 +21,6 @@
 
 - [x] Command-line argument handling skeleton
 - [ ] `init` (`builtin/init-db.c`) _in progress_
-  - [ ] Update command-line argument handling to allow for subcommand arguments to appear before the
-        subcommand.  (Why? Run `git grep "git -"` in C Git to see a couple thousand reasons.)
 - [ ] `config`
   - [ ] Then go back and finish parts of `init` that interact with `config`
 - [ ] Testing framework (`t/`)

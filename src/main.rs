@@ -30,7 +30,6 @@ fn main() -> Result<(), Error> {
                 .takes_value(true)
                 .value_name("git dir")
                 .help("Instead of initializing the repository as a directory to either $GIT_DIR or ./.git/, create a text file there containing the path to the actual repository. This file acts as filesystem-agnostic Git symbolic link to the repository.\n\nIf this is reinitialization, the repository will be moved to the specified path."))
-// todo: convert from string values to int
             .arg(Arg::with_name("shared_repo")
                 .long("shared")
                 .takes_value(true)
