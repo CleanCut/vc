@@ -1,6 +1,8 @@
 //! Compare to C Git `builtin/init-db.c`
 
-use crate::cache::{SharedRepo, GIT_DIR_ENVIRONMENT, GIT_WORK_TREE_ENVIRONMENT};
+use crate::cache::{
+    SharedRepo, DEFAULT_GIT_DIR_ENVIRONMENT, GIT_DIR_ENVIRONMENT, GIT_WORK_TREE_ENVIRONMENT,
+};
 use crate::sha1_file::safe_create_leading_directories;
 use crate::usage::{die, usage};
 use clap::ArgMatches;
@@ -74,7 +76,8 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
      * GIT_WORK_TREE makes sense only in conjunction with GIT_DIR
      * without --bare.  Catch the error early.
      */
-    let git_dir = env::var(GIT_DIR_ENVIRONMENT).unwrap_or_default();
+    let mut git_dir =
+        env::var(GIT_DIR_ENVIRONMENT).unwrap_or_else(|_| DEFAULT_GIT_DIR_ENVIRONMENT.to_string());
     let work_tree = env::var(GIT_WORK_TREE_ENVIRONMENT).unwrap_or_default();
     // todo: `|| args.is_present("bare")` will *never* be true if we reach it, because if it were
     //       true then we would have set `git_dir` to non-empty via line 53.  Remove it once the
@@ -87,8 +90,11 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         ));
     }
 
-    // todo: continue from
-    // https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L564
+    /*
+     * Set up the default .git directory contents
+     */
+
+    // todo: continue from https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L570
 
     Ok(())
 }
