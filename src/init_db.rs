@@ -53,10 +53,16 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         mkdir_tried = true;
     }
 
-    // todo: See if we can simplify from here to line 82. C Git makes a round trip through the
-    // environment, which seems like a big smell. First need to verify C Git doesn't unset it while
-    // setting shared_repo in https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L550
-    if args.is_present("bare") {
+    // todo: See if we can simplify from here to line 87. C Git makes a round trip through the
+    // environment, which seems like a big smell. It appears that the reason for the round trip in C
+    // Git is it is relying on logic in setenv to only replace the value if the env var is not
+    // already set.
+    //
+    // I'm not certain about the `args.is_present("directory")` logic. I'm inferring it from the
+    // `argc > 0` bit of https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L545
+    if args.is_present("bare")
+        && (args.is_present("directory") || env::var(GIT_DIR_ENVIRONMENT).is_err())
+    {
         env::set_var(GIT_DIR_ENVIRONMENT, env::current_dir()?);
     }
 
