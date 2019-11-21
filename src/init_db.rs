@@ -65,6 +65,8 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
     if args.is_present("bare")
         && (args.is_present("directory") || env::var(GIT_DIR_ENVIRONMENT).is_err())
     {
+        // By this time, we have chdir'd into the "directory" arg.
+        // todo: refactor so the logic isn't so deviously clever that you can't understand it.
         env::set_var(GIT_DIR_ENVIRONMENT, env::current_dir()?);
     }
 
