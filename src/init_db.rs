@@ -55,13 +55,10 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
         mkdir_tried = true;
     }
 
-    // todo: See if we can simplify from here to line 87. C Git makes a round trip through the
+    // todo: See if we can simplify from here to line 90. C Git makes a round trip through the
     // environment, which seems like a big smell. It appears that the reason for the round trip in C
     // Git is it is relying on logic in setenv to only replace the value if the env var is not
-    // already set.
-    //
-    // I'm not certain about the `args.is_present("directory")` logic. I'm inferring it from the
-    // `argc > 0` bit of https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L545
+    // already set.  But maybe something down the line needs to inherit the environment (?)
     if args.is_present("bare")
         && (args.is_present("directory") || env::var(GIT_DIR_ENVIRONMENT).is_err())
     {
@@ -78,7 +75,7 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
      * GIT_WORK_TREE makes sense only in conjunction with GIT_DIR
      * without --bare.  Catch the error early.
      */
-    let mut git_dir =
+    let git_dir =
         env::var(GIT_DIR_ENVIRONMENT).unwrap_or_else(|_| DEFAULT_GIT_DIR_ENVIRONMENT.to_string());
     let work_tree = env::var(GIT_WORK_TREE_ENVIRONMENT).unwrap_or_default();
     // todo: `|| args.is_present("bare")` will *never* be true if we reach it, because if it were
@@ -95,8 +92,48 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
     /*
      * Set up the default .git directory contents
      */
+    let is_bare_repository_cfg = if args.is_present("bare") {
+        true
+    } else {
+        guess_repository_type(&git_dir)?
+    };
 
-    // todo: continue from https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L570
+    // todo: continue from https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L573
+    //    if !is_bare_repository_cfg {
+    //        let git_work_tree_cfg = None;
+    //        if git_dir.contains("/") {
+    //
+    //        }
+    //    }
 
     Ok(())
+}
+
+fn guess_repository_type(git_dir: &str) -> Result<bool, std::io::Error> {
+    /*
+     * "GIT_DIR=. git init" is always bare.
+     * "GIT_DIR=`pwd` git init" too.
+     */
+    if git_dir == "." {
+        return Ok(true);
+    }
+    if git_dir == env::current_dir()?.to_str().unwrap_or_default() {
+        return Ok(true);
+    }
+    /*
+     * "GIT_DIR=.git or GIT_DIR=something/.git is usually not.
+     */
+    
+    if git_dir == ".git" {
+        return Ok(false);
+    }
+    if git_dir.ends_with("/.git") {
+        return Ok(false);
+    }
+
+    /*
+     * Otherwise it is often bare.  At this point
+     * we are just guessing.
+     */
+    Ok(true)
 }
