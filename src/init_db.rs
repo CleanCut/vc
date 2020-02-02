@@ -1,5 +1,7 @@
 //! Compare to C Git `builtin/init-db.c`
 
+#![allow(unused)]
+
 use crate::cache::{
     SharedRepo, DEFAULT_GIT_DIR_ENVIRONMENT, GIT_DIR_ENVIRONMENT, GIT_WORK_TREE_ENVIRONMENT,
 };
@@ -9,6 +11,46 @@ use clap::ArgMatches;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::str::FromStr;
+
+fn init_db(
+    git_dir: String,
+    real_git_dir: PathBuf,
+    template_dir: PathBuf,
+    quiet: bool,
+    exists_ok: bool,
+) -> Result<(), std::io::Error> {
+    Ok(())
+}
+
+fn guess_repository_type(git_dir: &str) -> Result<bool, std::io::Error> {
+    /*
+     * "GIT_DIR=. git init" is always bare.
+     * "GIT_DIR=`pwd` git init" too.
+     */
+    if git_dir == "." {
+        return Ok(true);
+    }
+    if git_dir == env::current_dir()?.to_str().unwrap_or_default() {
+        return Ok(true);
+    }
+    /*
+     * "GIT_DIR=.git or GIT_DIR=something/.git is usually not.
+     */
+    
+    if git_dir == ".git" {
+        return Ok(false);
+    }
+    if git_dir.ends_with("/.git") {
+        return Ok(false);
+    }
+
+    /*
+     * Otherwise it is often bare.  At this point
+     * we are just guessing.
+     */
+    Ok(true)
+}
 
 /*
  * If you want to, you can share the DB area with any number of branches.
@@ -20,13 +62,11 @@ use std::path::PathBuf;
 ///
 /// Handles cli `git init` command.
 pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
-    let _real_git_dir: Option<PathBuf> = args
-        .value_of("real_git_dir")
-        .map(|x| PathBuf::from(x).canonicalize().unwrap());
+    let real_git_dir: &str = args.value_of("real_git_dir").unwrap_or_default();
+    let real_git_dir: PathBuf = PathBuf::from(real_git_dir).canonicalize()?;
 
-    let _template_dir: Option<PathBuf> = args
-        .value_of("template_dir")
-        .map(|x| PathBuf::from(x).canonicalize().unwrap());
+    let template_dir: &str = args.value_of("template_dir").unwrap_or_default();
+    let template_dir: PathBuf = PathBuf::from(template_dir).canonicalize()?;
 
     let directory: Option<PathBuf> = args.value_of("directory").map(PathBuf::from);
     if directory.is_none() {
@@ -99,41 +139,31 @@ pub fn cmd_init_db(args: &ArgMatches) -> Result<(), std::io::Error> {
     };
 
     // todo: continue from https://github.com/git/git/blob/efd54442381a2792186abc994060b8f7dd8b834b/builtin/init-db.c#L573
-    //    if !is_bare_repository_cfg {
-    //        let git_work_tree_cfg = None;
-    //        if git_dir.contains("/") {
-    //
-    //        }
-    //    }
-
-    Ok(())
-}
-
-fn guess_repository_type(git_dir: &str) -> Result<bool, std::io::Error> {
-    /*
-     * "GIT_DIR=. git init" is always bare.
-     * "GIT_DIR=`pwd` git init" too.
-     */
-    if git_dir == "." {
-        return Ok(true);
-    }
-    if git_dir == env::current_dir()?.to_str().unwrap_or_default() {
-        return Ok(true);
-    }
-    /*
-     * "GIT_DIR=.git or GIT_DIR=something/.git is usually not.
-     */
-    
-    if git_dir == ".git" {
-        return Ok(false);
-    }
-    if git_dir.ends_with("/.git") {
-        return Ok(false);
+    if !is_bare_repository_cfg {
+        let git_work_tree_cfg = if let Some(slash_idx) = git_dir.rfind('/') {
+            PathBuf::from_str(git_dir.split_at(slash_idx).0)
+                .unwrap() // Given .rfind() succeeded, this should not be able to crash
+                .canonicalize()?
+        } else {
+            env::current_dir()?
+        };
+    // todo: In C, set_git_work_tree() sets the global `git_work_tree` and then calls
+    //       repo_set_worktree() to set `.worktree` on the global repo struct.  Since none of
+    //       those globals are used yet, I'm not yet certain what to do here.
+    /* Block-commented-out because clippy doesn't like identical branches
+            if !work_tree.is_empty() {
+                // set_git_work_tree(work_tree);
+            } else {
+                // set_git_work_tree(git_work_tree_config);
+            }
+    */
+    } else if !work_tree.is_empty() {
+        // set_git_work_tree(work_tree);
     }
 
-    /*
-     * Otherwise it is often bare.  At this point
-     * we are just guessing.
-     */
-    Ok(true)
+    // Combined into "flags" in C
+    let quiet = args.is_present("quiet");
+    let exists_ok = true;
+
+    init_db(git_dir, real_git_dir, template_dir, quiet, exists_ok)
 }
